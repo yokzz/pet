@@ -1,5 +1,5 @@
 [project]
-name = "django"
+name = "chat"
 version = "5.2.5"
 description = ""
 authors = [
@@ -8,6 +8,9 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "channels[daphne] (>=4.3.1,<5.0.0)",
+    "django (>=5.2.5,<6.0.0)",
+    "channels-redis (>=4.3.0,<5.0.0)"
 ]
 
 
