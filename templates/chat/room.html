@@ -1,49 +1,124 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8"/>
+    <meta charset="UTF-8">
     <title>Chat Room</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}"/>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
-    <input id="chat-message-input" type="text" size="100"><br>
-    <input id="chat-message-submit" type="button" value="Send">
-    {{ room_name|json_script:"room-name" }}
-    <script>
-        const roomName = JSON.parse(document.getElementById('room-name').textContent);
+<body class="bg-gradient-to-br from-gray-100 to-gray-200 min-h-screen flex items-center justify-center p-6">
 
-        const chatSocket = new WebSocket(
-            'ws://'
-            + window.location.host
-            + '/ws/chat/'
-            + roomName
-            + '/'
-        );
+<div class="w-full max-w-3xl flex flex-col bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-300">
+    <div class="p-4 border-b border-gray-300 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-center">
+        <h1 class="text-xl font-bold">💬 {{ room_name }}</h1>
+    </div>
 
-        chatSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            document.querySelector('#chat-log').value += (data.message + '\n');
-        };
+    <div id="chat-container" class="flex-1 p-5 overflow-y-auto space-y-4 bg-gradient-to-b from-gray-50 to-gray-100 scrollbar-thin scrollbar-thumb-gray-400">
+        {% for message in messages %}
+        <div class="flex items-end gap-2 w-full
+            {% if message.user_id == request.user.id %}
+                justify-end
+            {% else %}
+                justify-start
+            {% endif %}">
+            
+            {% if message.user_id != request.user.id %}
+                <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold">
+                    {{ message.user.username|first|upper }}
+                </div>
+            {% endif %}
 
-        chatSocket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly');
-        };
+            <div class="relative max-w-[70%] px-5 py-3 rounded-2xl shadow-md text-base leading-relaxed
+                {% if message.user_id == request.user.id %}
+                    bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-br-none
+                {% else %}
+                    bg-gray-200 text-gray-900 rounded-bl-none
+                {% endif %}">
+                <div class="whitespace-pre-wrap break-words">{{ message.content }}</div>
+                <div class="text-[11px] opacity-70 mt-1 text-right">
+                    {{ message.timestamp|time:"h:i A" }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 
-        document.querySelector('#chat-message-input').focus();
-        document.querySelector('#chat-message-input').onkeyup = function(e) {
-            if (e.key === 'Enter') { 
-                document.querySelector('#chat-message-submit').click();
-            }
-        };
+    <div class="flex items-center gap-3 p-4 bg-white border-t border-gray-200">
+        <input id="chat-message-input" type="text" placeholder="Message..."
+               class="flex-1 px-5 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50 text-gray-900 placeholder-gray-400 shadow-sm text-base transition">
+        <button id="chat-message-submit"
+                class="w-12 h-12 flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full shadow-md transition">
+            ➤
+        </button>
+    </div>
+</div>
 
-        document.querySelector('#chat-message-submit').onclick = function(e) {
-            const messageInputDom = document.querySelector('#chat-message-input');
-            const message = messageInputDom.value;
-            chatSocket.send(JSON.stringify({
-                'message': message
-            }));
-            messageInputDom.value = '';
-        };
-    </script>
+{{ room_name|json_script:"room-name" }}
+
+<script>
+    const roomName = JSON.parse(document.getElementById('room-name').textContent);
+    const chatSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/chat/' + roomName + '/'
+    );
+
+    const chatContainer = document.getElementById('chat-container');
+    const messageInput = document.getElementById('chat-message-input');
+    const currentUser = "{{ request.user.id }}";
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const mine = Number(data.user_id) === Number(currentUser);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = "flex items-end gap-2 w-full " + (mine ? "justify-end" : "justify-start");
+
+        if (!mine) {
+            const avatar = document.createElement('div');
+            avatar.className = "w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold";
+            avatar.textContent = data.username[0].toUpperCase();
+            wrapper.appendChild(avatar);
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = "relative max-w-[70%] px-5 py-3 rounded-2xl shadow-md text-base leading-relaxed " +
+            (mine
+                ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-br-none"
+                : "bg-gray-200 text-gray-900 rounded-bl-none");
+
+        const content = document.createElement('div');
+        content.textContent = data.message;
+
+        const time = document.createElement('div');
+        time.className = "text-[11px] opacity-70 mt-1 text-right";
+        time.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        messageDiv.appendChild(content);
+        messageDiv.appendChild(time);
+
+        wrapper.appendChild(messageDiv);
+        chatContainer.appendChild(wrapper);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+    messageInput.focus();
+    messageInput.onkeyup = function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('chat-message-submit').click();
+        }
+    };
+
+    document.getElementById('chat-message-submit').onclick = function() {
+        const message = messageInput.value.trim();
+        if (message !== '') {
+            chatSocket.send(JSON.stringify({'message': message}));
+            messageInput.value = '';
+        }
+    };
+</script>
 </body>
 </html>
