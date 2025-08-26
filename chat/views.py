@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from chat.models import ChatRoom, Message
 
+import os
+
 def chats_view(request):
     return render(request, "chat/chats.html")
 
@@ -9,9 +11,12 @@ def room_view(request, room_name):
     room, created = ChatRoom.objects.get_or_create(name=room_name)
     messages = Message.objects.filter(room=room)
     
+    tz = request.session.get(os.environ.get("TZ_SESSION_KEY"))
+    
     context = {
         "room_name": room_name,
         "messages": messages,
+        "timezone": tz
     }
     
     return render(request, "chat/room.html", context)
