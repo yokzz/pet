@@ -18,7 +18,7 @@
         <h1 class="text-xl font-bold">💬 {{ room_name }}</h1>
     </div>
 
-    <div class="absolute top-3 left-1/2 -translate-x-1/2 z-20">
+    <div class="fixed top-3 left-1/2 -translate-x-1/2 z-20">
         <div id="date-separator" class="hidden px-4 py-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold rounded-full shadow-md">
         </div>
     </div>
@@ -26,33 +26,34 @@
     <div id="chat-container" class="flex-1 relative p-5 overflow-y-auto space-y-4 bg-gradient-to-b from-gray-50 to-gray-100 scrollbar-thin scrollbar-thumb-gray-400">
         {% for message in messages %}
             {% ifchanged message.timestamp|date:"Y-m-d" %}
-                <div class="hidden" class="current-date">{{ message.timestamp|date:"F j" }}</div>
+                <div class="invisible h-0 !mt-0 current-date">{{ message.timestamp|date:"F j" }}</div>
             {% endifchanged %}
-        <div class="flex items-end gap-2 w-full
-            {% if message.user_id == request.user.id %}
-                justify-end
-            {% else %}
-                justify-start
-            {% endif %}">
-            
-            {% if message.user_id != request.user.id %}
-                <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold">
-                    {{ message.user.username|first|upper }}
-                </div>
-            {% endif %}
-
-            <div class="relative max-w-[70%] px-5 py-3 rounded-2xl shadow-md text-base leading-relaxed
+            <div class="flex items-end gap-2 w-full
                 {% if message.user_id == request.user.id %}
-                    bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-br-none
+                    justify-end
                 {% else %}
-                    bg-gray-200 text-gray-900 rounded-bl-none
+                    justify-start
                 {% endif %}">
-                <div class="whitespace-pre-wrap break-words">{{ message.content }}</div>
-                <div class="text-[11px] opacity-70 mt-1 text-right">
-                    {{ message.timestamp|time:"h:i A" }}
+                
+                {% if message.user_id != request.user.id %}
+                    <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold">
+                        {{ message.user.username|first|upper }}
+                    </div>
+                {% endif %}
+
+                <div class="relative max-w-[70%] px-5 py-3 rounded-2xl shadow-md text-base leading-relaxed
+                    {% if message.user_id == request.user.id %}
+                        bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-br-none
+                    {% else %}
+                        bg-gray-200 text-gray-900 rounded-bl-none
+                    {% endif %}">
+                    <div class="whitespace-pre-wrap break-words">{{ message.content }}</div>
+                    <div class="text-[11px] opacity-70 mt-1 text-right">
+                        {{ message.timestamp|time:"h:i A" }}
+                    </div>
                 </div>
             </div>
-        </div>
+
         {% endfor %}
     </div>
 
@@ -69,15 +70,6 @@
 {{ room_name|json_script:"room-name" }}
 
 <script>
-    var chatWindow = document.getElementById('chat-container');
-    var dateSeparator = document.getElementById('date-separator');
-
-    chatWindow.onmousewheel = function() {
-        date = currentDate.textContent;
-        dateSeparator.textContent = date;
-        dateSeparator.classList.remove("hidden")
-    }
-
     const roomName = JSON.parse(document.getElementById('room-name').textContent);
     const chatSocket = new WebSocket(
         'ws://' + window.location.host + '/ws/chat/' + roomName + '/'
@@ -141,5 +133,7 @@
         }
     };
 </script>
+
+<script src="{% static 'js/script.js'%}"></script>
 </body>
 </html>
